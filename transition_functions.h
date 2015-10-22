@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "analyzer.h"
 
 char tolower(char c) {
@@ -60,16 +61,69 @@ void add_digit_b(analyzer_state * this) {
   add_digit(this);
 }
 
+int get_value(int * digits, int digit_count, int base) {
+  int sum = 0;
+  for(int i = 0; i < digit_count; i++) {
+    if(base == 16) {
+      sum = sum << 4;
+      sum += digits[i];
+    } else if(base == 8) {
+      sum = sum  << 3;
+      sum += digits[i];
+    } else {
+      sum *= 10;
+      sum += digits[i];
+    }
+  }
+  return sum;
+}
+
 void accept_oct(analyzer_state * this) {
-  printf("IMPLEMENT ACCEPT OCT\n");
+  this->base = 8;
+  if(this->digit_count < MAX_OCT_DIGITS || (this->digit_count == MAX_OCT_DIGITS && this->digits[0] <= 3)) {
+    this->value = get_value(this->digits, this->digit_count, this->base);
+  } else {
+    this->current_state = reject;
+    printf("Too many digits for Octal constant.\n");
+  }
+}
+
+bool will_not_overflow_dec(int digit_count, int * digits, int sign) {
+  if(digit_count < MAX_DEC_DIGITS) {
+    return true;
+  } else if(digit_count == MAX_DEC_DIGITS) {
+    char dec_string[digit_count];
+    for(int i = 0; i < digit_count; i++) {
+      dec_string[i] = (char)('0' + digits[i]);
+    }
+    if(sign == 1) {
+      return strcmp(dec_string, "2147483647") <= 0;
+    } else {
+      return strcmp(dec_string, "2147483648") <= 0;
+    }
+  } else {
+    return false;
+  }
 }
 
 void accept_decimal(analyzer_state * this) {
-  printf("IMPLEMENT ACCEPT DEC\n");
+  this->base = 10;
+  if(will_not_overflow_dec(this->digit_count, this->digits, this->sign)) {
+    this->value = this->sign * get_value(this->digits, this->digit_count, this->base);
+  } else {
+    this->current_state = reject;
+    printf("Too many digits for Decimal constant.\n");
+  }
 }
 
 void accept_hex(analyzer_state * this) {
-  printf("IMPLEMENT ACCEPT HEX\n");
+  this->base = 16;
+  if(this->digit_count <= MAX_HEX_DIGITS) {
+    this->value = get_value(this->digits, this->digit_count, this->base);
+  } else {
+    this->current_state = reject;
+    printf("Too many digits for Hex constant\n");
+  }
 }
 
 void reject_lex(analyzer_state * this) {

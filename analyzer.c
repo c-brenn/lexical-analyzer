@@ -6,11 +6,19 @@ analyzer_state * new_analyzer_state() {
   this->digit_count = 0;
   this->current_char = '+';
   this->current_state = start;
-  this->digits = malloc(sizeof(int) * MAX_OCTAL_DIGITS);
+  this->digits = malloc(sizeof(int) * MAX_OCT_DIGITS);
+  this->value = 0;
   return this;
 }
 
+void free_analyzer_state(analyzer_state * this) {
+  free(this->digits);
+  free(this);
+}
+
 void analyze_lexeme(char * lexeme) {
+  printf("Lexeme(%s) ->", lexeme);
+
   analyzer_state * astate = new_analyzer_state();
   bool done = false;
   int index = 0;
@@ -22,8 +30,15 @@ void analyze_lexeme(char * lexeme) {
     if(current_transition.transition_function != NULL) {
       current_transition.transition_function(astate);
     }
-    astate->current_state = current_transition.next_state;
+    if(astate->current_state != reject) {
+      astate->current_state = current_transition.next_state;
+    }
     done = (astate->current_state == reject || astate->current_state == accept);
     index++;
+  }
+
+  if(astate->current_state == accept) {
+    char * base = (astate->base == 8)? "Octal" : (astate->base == 10)? "Decimal" : "Hexadecimal";
+    printf("Lexical Token(%s Constant, %d)\n", base, astate->value);
   }
 }

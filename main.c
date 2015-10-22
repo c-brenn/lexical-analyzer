@@ -1,12 +1,17 @@
 #include "analyzer.c"
 
 int main() {
-  char * test_oct = "123b";
-  char * test_dec = "1234";
-  char * test_hex = "123afh";
-  char * fuck = "12ab";
-  analyze_lexeme(test_oct);
-  analyze_lexeme(test_dec);
-  analyze_lexeme(test_hex);
-  analyze_lexeme(fuck);
+  int input_count = 7;
+  char * inputs[7] = {
+    "179",
+    "-2803",
+    "-0",
+    "4bc9h",
+    "172371b",
+    "bb",
+    "-000001"
+  };
+  for(int i = 0; i < input_count; i++) {
+    analyze_lexeme(inputs[i]);
+  }
 }

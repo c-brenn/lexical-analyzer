@@ -37,6 +37,8 @@ typedef struct {
   char current_char;
   input current_input;
   int * digits;
+  int value;
+  int base;
 } analyzer_state;
 
 typedef struct {
@@ -44,8 +46,9 @@ typedef struct {
   void (*transition_function)(analyzer_state * this);
 } transition;
 
-#define MAX_OCTAL_DIGITS 11
+#define MAX_OCT_DIGITS 11
 #define MAX_DEC_DIGITS 10
 #define MAX_HEX_DIGITS 8
 
 analyzer_state * new_analyzer_state();
+void analyze_lexeme(char * lexeme);
