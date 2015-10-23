@@ -110,9 +110,11 @@ bool will_not_overflow_dec(int digit_count, int * digits, int sign) {
       dec_string[i] = (char)('0' + digits[i]);
     }
     if(sign == 1) {
-      return strcmp(dec_string, "2147483647") <= 0;
+      int val = strcmp(dec_string, "2147483647");
+      return val <= 0;
     } else {
-      return strcmp(dec_string, "2147483648") <= 0;
+      int val = strcmp(dec_string, "2147483648");
+      return val <= 0;
     }
   } else {
     return false;
@@ -141,7 +143,7 @@ void rej_sign(analyzer_state * this) {
   if(this->current_char == '+' || this->current_char == '-') {
     generic_reject(this, "Extraneous sign");
   } else {
-    reject(this, "Only signed decimal constants are permitted");
+    generic_reject(this, "Only signed decimal constants are permitted");
   }
 }
 
