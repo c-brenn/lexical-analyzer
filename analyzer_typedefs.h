@@ -35,10 +35,10 @@ typedef struct {
   int digit_count;
   state current_state;
   char current_char;
-  input current_input;
   int * digits;
   int value;
   int base;
+  char * error_string;
 } analyzer_state;
 
 typedef struct {

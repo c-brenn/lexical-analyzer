@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "analyzer.h"
+#include "analyzer_typedefs.h"
 
 char tolower(char c) {
   return (c <= 'Z' && c >= 'A') ? c + 32 : c;
@@ -126,23 +126,35 @@ void accept_hex(analyzer_state * this) {
   }
 }
 
-void reject_lex(analyzer_state * this) {
-  printf("rejected for some reason\n");
+void rej_sign(analyzer_state * this) {
+  if(this->current_char == '+' || this->current_char == '-') {
+    this->error_string = "Extraneous sign";
+  } else {
+    this->error_string = "Only signed decimal constants are permitted";
+  }
+}
+
+void rej_end(analyzer_state * this) {
+  this->error_string = "Invalid end of input";
+}
+
+void rej_after_h(analyzer_state * this) {
+  this->error_string = "Characters after ending h or H";
 }
 
 transition transition_table[10][8] =
 {
-/*        ||     +|-  ||  0  ||  1-7  ||  8-9  ||  a-f  ||  a-f  ||  b|B  ||  h|H  ||  -|           */
+/*        ||     +|-  ||  0  ||  1-7  ||  8-9  ||  a-f  ||  b|B  ||  h|H  ||  -|           */
 /* =======|| ===============================================================================================================================================*/
-/* 0 start|| */ {{signed_value, &set_sign}, {lz, NULL}, {oct, &add_digit}, {dec, &add_digit}, {hex, &add_digit}, {hex, &add_digit}, {reject, &reject_lex}, {reject, &reject_lex}},
-/* 1 sign || */ {{reject, &reject_lex}, {slz, NULL}, {sdec, &add_digit}, {sdec, &add_digit}, {reject, &reject_lex}, {reject, &reject_lex},{reject, &reject_lex}, {reject, &reject_lex}},
-/* 2 slz  || */ {{reject, &reject_lex}, {slz, NULL}, {sdec, &add_digit},{sdec, &add_digit}, {reject, &reject_lex}, {reject, &reject_lex},{reject, &reject_lex}, {accept, &accept_decimal}},
-/* 3 lz   || */ {{reject, &reject_lex}, {lz, NULL}, {oct, &add_digit}, {dec, &add_digit}, {hex, &add_digit}, {b, NULL}, {h, NULL}, {accept, &accept_decimal}},
-/* 4 oct  || */ {{reject, &reject_lex}, {oct, &add_digit}, {oct, &add_digit}, {dec, &add_digit}, {hex, &add_digit}, {b, NULL}, {h, NULL}, {accept, &accept_decimal}},
-/* 5 dec  || */ {{reject, &reject_lex}, {dec, &add_digit}, {dec, &add_digit}, {dec, &add_digit}, {hex, &add_digit}, {hex, &add_digit}, {h, NULL}, {accept, &accept_decimal}},
-/* 6 sdec || */ {{reject, &reject_lex}, {sdec, &add_digit}, {sdec, &add_digit}, {sdec, &add_digit}, {reject, &reject_lex}, {reject, &reject_lex}, {reject, &reject_lex}, {accept, &accept_decimal}},
-/* 7 hex  || */ {{reject, &reject_lex}, {hex, &add_digit}, {hex, &add_digit}, {hex, &add_digit}, {hex, &add_digit}, {hex, &add_digit}, {h, NULL}, {reject, &reject_lex}},
-/* 8 b    || */ {{reject, &reject_lex}, {hex, &add_digit_b}, {hex, &add_digit_b}, {hex, &add_digit_b}, {hex, &add_digit_b}, {hex, &add_digit_b}, {h, &add_b}, {accept, &accept_oct}},
-/* 9 h    || */ {{reject, &reject_lex}, {reject, &reject_lex}, {reject, &reject_lex}, {reject, &reject_lex}, {reject, &reject_lex}, {reject, &reject_lex}, {reject, &reject_lex}, {accept, &accept_hex}}
+/* 0 start|| */ {{signed_value, &set_sign}, {lz, NULL}, {oct, &add_digit}, {dec, &add_digit}, {hex, &add_digit}, {hex, &add_digit}, {reject, &rej_end}, {reject, &rej_end}},
+/* 1 sign || */ {{reject, &rej_sign}, {slz, NULL}, {sdec, &add_digit}, {sdec, &add_digit}, {reject, &rej_sign}, {reject, &rej_sign},{reject, &rej_end}, {reject, &rej_end}},
+/* 2 slz  || */ {{reject, &rej_sign}, {slz, NULL}, {sdec, &add_digit},{sdec, &add_digit}, {reject, &rej_sign}, {reject, &rej_sign},{reject, &rej_sign}, {accept, &accept_decimal}},
+/* 3 lz   || */ {{reject, &rej_sign}, {lz, NULL}, {oct, &add_digit}, {dec, &add_digit}, {hex, &add_digit}, {b, NULL}, {h, NULL}, {accept, &accept_decimal}},
+/* 4 oct  || */ {{reject, &rej_sign}, {oct, &add_digit}, {oct, &add_digit}, {dec, &add_digit}, {hex, &add_digit}, {b, NULL}, {h, NULL}, {accept, &accept_decimal}},
+/* 5 dec  || */ {{reject, &rej_sign}, {dec, &add_digit}, {dec, &add_digit}, {dec, &add_digit}, {hex, &add_digit}, {hex, &add_digit}, {h, NULL}, {accept, &accept_decimal}},
+/* 6 sdec || */ {{reject, &rej_sign}, {sdec, &add_digit}, {sdec, &add_digit}, {sdec, &add_digit}, {reject, &rej_sign}, {reject, &rej_sign}, {reject, &rej_sign}, {accept, &accept_decimal}},
+/* 7 hex  || */ {{reject, &rej_sign}, {hex, &add_digit}, {hex, &add_digit}, {hex, &add_digit}, {hex, &add_digit}, {hex, &add_digit}, {h, NULL}, {reject, &rej_end}},
+/* 8 b    || */ {{reject, &rej_sign}, {hex, &add_digit_b}, {hex, &add_digit_b}, {hex, &add_digit_b}, {hex, &add_digit_b}, {hex, &add_digit_b}, {h, &add_b}, {accept, &accept_oct}},
+/* 9 h    || */ {{reject, &rej_sign}, {reject, &rej_after_h}, {reject, &rej_after_h}, {reject, &rej_after_h}, {reject, &rej_after_h}, {reject, &rej_after_h}, {reject, &rej_after_h}, {accept, &accept_hex}}
 };
 
