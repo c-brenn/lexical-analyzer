@@ -3,6 +3,7 @@
 #include <string.h>
 #include "analyzer_typedefs.h"
 
+// converts a character to lower case if necessary
 char tolower(char c) {
   return (c <= 'Z' && c >= 'A') ? c + 32 : c;
 }
@@ -14,6 +15,7 @@ void set_sign(analyzer_state * this) {
   }
 }
 
+// converts a digit to it's corresponding decimal value
 int char_to_int(char digit) {
   digit = tolower(digit);
   if(digit >= 'a' && digit <= 'f') {
@@ -23,6 +25,9 @@ int char_to_int(char digit) {
   }
 }
 
+// translates a character to an input
+// where input is an enum used to index
+// into the state table
 input char_to_input(char c) {
   c = tolower(c);
   if(c == 'b') {
@@ -46,35 +51,42 @@ input char_to_input(char c) {
   }
 }
 
+// rejects the input and sets the error string to an appropriate message
 void generic_reject(analyzer_state * this, char * error_string) {
   this->current_state = reject;
   this->error_string = error_string;
 }
 
+// converts the current digit to it's integer value
+// adds it to the array of digits
 void add_digit(analyzer_state * this) {
   this->digits[this->digit_count] = char_to_int(this->current_char);
   this->digit_count++;
   if(this->digit_count > MAX_HEX_DIGITS) {
     if((this->current_state == dec || this->current_state == sdec) && this->digit_count > MAX_DEC_DIGITS) {
-      generic_reject(this, "Too many digits for decimal constant");
+      generic_reject(this, "Value too large to be a valid decimal constant");
     } else if(this->current_state == oct && this->digit_count > MAX_OCT_DIGITS) {
-      generic_reject(this, "Too many digits for constant of any base");
+      generic_reject(this, "Value too large to be a valid constant of any base");
     } else if(this->current_state == hex) {
-      generic_reject(this, "Too many digits for hexadecimal constant");
+      generic_reject(this, "Value too large to be a valid hexadecimal constant");
     }
   }
 }
 
+// add's a b (decimal 11) to the array
 void add_b(analyzer_state * this) {
   this->digits[this->digit_count] = char_to_int('b');
   this->digit_count++;
 }
 
+// add's both a b and ther current digit to the array
 void add_digit_b(analyzer_state * this) {
   add_b(this);
   add_digit(this);
 }
 
+// converts the digits in the array into the decimal value
+// they describe using the correct base
 int get_value(int * digits, int digit_count, int base) {
   int sum = 0;
   for(int i = 0; i < digit_count; i++) {
@@ -92,15 +104,17 @@ int get_value(int * digits, int digit_count, int base) {
   return sum;
 }
 
+// accepts an octal lexeme if it will not overflow
 void accept_oct(analyzer_state * this) {
   this->base = 8;
   if(this->digit_count < MAX_OCT_DIGITS || (this->digit_count == MAX_OCT_DIGITS && this->digits[0] <= 3)) {
     this->value = get_value(this->digits, this->digit_count, this->base);
   } else {
-    generic_reject(this, "Too many digits for octal constant");
+    generic_reject(this, "Value too large to be a valid octal constant");
   }
 }
 
+// checks to see if a decimal lexeme would overflow
 bool will_not_overflow_dec(int digit_count, int * digits, int sign) {
   if(digit_count < MAX_DEC_DIGITS) {
     return true;
@@ -121,24 +135,27 @@ bool will_not_overflow_dec(int digit_count, int * digits, int sign) {
   }
 }
 
+// accepts a decimal lexeme if it will not overflow
 void accept_decimal(analyzer_state * this) {
   this->base = 10;
   if(will_not_overflow_dec(this->digit_count, this->digits, this->sign)) {
     this->value = this->sign * get_value(this->digits, this->digit_count, this->base);
   } else {
-    generic_reject(this, "Too many digits for decimal constant");
+    generic_reject(this, "Value too large to be a valid decimal constant");
   }
 }
 
+// accepts a hexadecimal lexeme if it will not overflow
 void accept_hex(analyzer_state * this) {
   this->base = 16;
   if(this->digit_count <= MAX_HEX_DIGITS) {
     this->value = get_value(this->digits, this->digit_count, this->base);
   } else {
-    generic_reject(this, "Too many digits for hexadecimal constant");
+    generic_reject(this, "Value too large to be a valid hexadecimal constant");
   }
 }
 
+// rejects the lexeme because a sign is encountered when it should not be
 void rej_sign(analyzer_state * this) {
   if(this->current_char == '+' || this->current_char == '-') {
     generic_reject(this, "Extraneous sign");
@@ -147,10 +164,14 @@ void rej_sign(analyzer_state * this) {
   }
 }
 
+// rejects the lexeme becuase the end of the string was reached too early
+// or a h|H was seen to early
 void rej_end(analyzer_state * this) {
   generic_reject(this, "Invalid end of input");
 }
 
+// rejects the lexeme because there are characters after a h|H
+// as h|H must denote the end of a hex value
 void rej_after_h(analyzer_state * this) {
   generic_reject(this, "Characters after ending h or H");
 }

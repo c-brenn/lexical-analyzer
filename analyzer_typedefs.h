@@ -3,6 +3,7 @@ typedef enum {
   true = 1
 } bool;
 
+// used as the row index for the state table
 typedef enum {
   start = 0,
   signed_value,
@@ -18,6 +19,7 @@ typedef enum {
   reject
 } state;
 
+// used as the column index for the state table
 typedef enum {
   sign = 0,
   zero,
@@ -30,6 +32,8 @@ typedef enum {
   invalid
 } input;
 
+// used to store the current state of the program
+// a new analyzer state is used for each lexeme
 typedef struct {
   int sign;
   int digit_count;
@@ -41,6 +45,9 @@ typedef struct {
   char * error_string;
 } analyzer_state;
 
+// used as the cells in the transition table
+// the transition function is called before moving
+// to the next state
 typedef struct {
   state next_state;
   void (*transition_function)(analyzer_state * this);
