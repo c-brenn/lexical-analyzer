@@ -46,9 +46,23 @@ input char_to_input(char c) {
   }
 }
 
+void generic_reject(analyzer_state * this, char * error_string) {
+  this->current_state = reject;
+  this->error_string = error_string;
+}
+
 void add_digit(analyzer_state * this) {
   this->digits[this->digit_count] = char_to_int(this->current_char);
   this->digit_count++;
+  if(this->digit_count > MAX_HEX_DIGITS) {
+    if((this->current_state == dec || this->current_state == sdec) && this->digit_count > MAX_DEC_DIGITS) {
+      generic_reject(this, "Too many digits for decimal constant");
+    } else if(this->current_state == oct && this->digit_count > MAX_OCT_DIGITS) {
+      generic_reject(this, "Too many digits for constant of any base");
+    } else if(this->current_state == hex) {
+      generic_reject(this, "Too many digits for hexadecimal constant");
+    }
+  }
 }
 
 void add_b(analyzer_state * this) {
@@ -83,8 +97,7 @@ void accept_oct(analyzer_state * this) {
   if(this->digit_count < MAX_OCT_DIGITS || (this->digit_count == MAX_OCT_DIGITS && this->digits[0] <= 3)) {
     this->value = get_value(this->digits, this->digit_count, this->base);
   } else {
-    this->current_state = reject;
-    printf("Too many digits for Octal constant.\n");
+    generic_reject(this, "Too many digits for octal constant");
   }
 }
 
@@ -111,8 +124,7 @@ void accept_decimal(analyzer_state * this) {
   if(will_not_overflow_dec(this->digit_count, this->digits, this->sign)) {
     this->value = this->sign * get_value(this->digits, this->digit_count, this->base);
   } else {
-    this->current_state = reject;
-    printf("Too many digits for Decimal constant.\n");
+    generic_reject(this, "Too many digits for decimal constant");
   }
 }
 
@@ -121,25 +133,24 @@ void accept_hex(analyzer_state * this) {
   if(this->digit_count <= MAX_HEX_DIGITS) {
     this->value = get_value(this->digits, this->digit_count, this->base);
   } else {
-    this->current_state = reject;
-    printf("Too many digits for Hex constant\n");
+    generic_reject(this, "Too many digits for hexadecimal constant");
   }
 }
 
 void rej_sign(analyzer_state * this) {
   if(this->current_char == '+' || this->current_char == '-') {
-    this->error_string = "Extraneous sign";
+    generic_reject(this, "Extraneous sign");
   } else {
-    this->error_string = "Only signed decimal constants are permitted";
+    reject(this, "Only signed decimal constants are permitted");
   }
 }
 
 void rej_end(analyzer_state * this) {
-  this->error_string = "Invalid end of input";
+  generic_reject(this, "Invalid end of input");
 }
 
 void rej_after_h(analyzer_state * this) {
-  this->error_string = "Characters after ending h or H";
+  generic_reject(this, "Characters after ending h or H");
 }
 
 transition transition_table[10][8] =
